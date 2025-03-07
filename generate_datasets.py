@@ -7,10 +7,10 @@ from PIL import Image, ImageDraw
 from random_fen_gen import generate_fen
 
 ADD_RANDOM_DISTORTIONS = True
-DISTORTION_PROBABILITY = 0.5
+DISTORTION_PROBABILITY = 0.6
 
 ROTATE_RANDOMLY = True
-ROTATE_PROBABILITY = 0.25
+ROTATE_PROBABILITY = 0.20
 
 RESIZE_RANDOMLY = True
 RESIZE_PROBABILITY = 0.4
@@ -260,8 +260,8 @@ def generate_image(board, piece_set, fen):
 
     # Add random distortions
     if ADD_RANDOM_DISTORTIONS:
-        board = add_random_lines(board, max_lines=15, max_thickness=6, max_opacity=180)
-        board = add_random_noise(board, max_points=150, max_radius=6)
+        board = add_random_lines(board, max_lines=15, max_thickness=20, max_opacity=180)
+        board = add_random_noise(board, max_points=100, max_radius=35)
 
     return board
 
@@ -308,7 +308,7 @@ def generate_images_with_background_noise(args):
     for _ in range(variations):
         # Select and resize chessboard
         board_img = random.choice(boards).copy()
-        board_size_random = random.randint(250, BOARD_SIZE)
+        board_size_random = random.randint(80, BOARD_SIZE)
         scale_factor = board_size_random / original_bg_size
         scaled_tile = TILE_SIZE * scale_factor
         max_pos = original_bg_size - board_size_random
