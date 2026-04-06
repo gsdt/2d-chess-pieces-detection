@@ -20,6 +20,7 @@ Output:
 import os
 import random
 import string
+import numpy as np
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 from random_fen_gen import generate_fen
 
@@ -49,6 +50,12 @@ MAX_NOISE_DOTS = 200
 
 ADD_BLUR = True
 BLUR_PROBABILITY = 0.1
+
+ADD_GRAYSCALE = True
+GRAYSCALE_PROBABILITY = 0.2  # 20% of images become grayscale (simulates book scans)
+
+ADD_LOW_CONTRAST = True
+LOW_CONTRAST_PROBABILITY = 0.15  # 15% get washed out contrast
 
 ADD_FAKE_SQUARES = True
 FAKE_SQUARE_PROBABILITY = 0.5
@@ -301,6 +308,35 @@ def add_blur(canvas):
         return canvas
     radius = random.uniform(0.5, 1.5)
     return canvas.filter(ImageFilter.GaussianBlur(radius=radius))
+
+
+def add_grayscale(canvas):
+    """Convert to grayscale then back to RGB (simulates book/scan images)."""
+    if not ADD_GRAYSCALE or random.random() > GRAYSCALE_PROBABILITY:
+        return canvas
+    gray = canvas.convert('L')
+    # Optionally add slight sepia/yellowish tint (like old book pages)
+    if random.random() < 0.3:
+        arr = np.array(gray)
+        rgb = np.stack([
+            np.clip(arr * random.uniform(1.0, 1.1), 0, 255),
+            np.clip(arr * random.uniform(0.95, 1.05), 0, 255),
+            np.clip(arr * random.uniform(0.85, 0.95), 0, 255),
+        ], axis=-1).astype(np.uint8)
+        return Image.fromarray(rgb)
+    return gray.convert('RGB')
+
+
+def add_low_contrast(canvas):
+    """Reduce contrast to simulate washed-out scans or low-quality prints."""
+    if not ADD_LOW_CONTRAST or random.random() > LOW_CONTRAST_PROBABILITY:
+        return canvas
+    from PIL import ImageEnhance
+    # Reduce contrast
+    canvas = ImageEnhance.Contrast(canvas).enhance(random.uniform(0.4, 0.7))
+    # Increase brightness slightly (washed out look)
+    canvas = ImageEnhance.Brightness(canvas).enhance(random.uniform(1.1, 1.4))
+    return canvas
 
 
 def add_fake_squares(canvas, placements):
@@ -563,6 +599,8 @@ def generate_negative_text_only(backgrounds, img_path, label_path):
     canvas = add_random_lines(canvas)
     canvas = add_fake_squares(canvas, [])
     canvas = add_noise_dots(canvas)
+    canvas = add_grayscale(canvas)
+    canvas = add_low_contrast(canvas)
 
     canvas.save(img_path, "JPEG", quality=95)
     with open(label_path, "w") as f:
@@ -593,6 +631,8 @@ def generate_negative_images_only(backgrounds, img_path, label_path):
     canvas = add_fake_squares(canvas, [])
     canvas = add_random_lines(canvas)
     canvas = add_noise_dots(canvas)
+    canvas = add_grayscale(canvas)
+    canvas = add_low_contrast(canvas)
 
     canvas.save(img_path, "JPEG", quality=95)
     with open(label_path, "w") as f:
@@ -637,6 +677,8 @@ def generate_mixed_text_and_boards(boards, piece_sets, backgrounds, img_path, la
 
     # More text around boards (captions, annotations)
     canvas = add_random_text(canvas, placements)
+    canvas = add_grayscale(canvas)
+    canvas = add_low_contrast(canvas)
 
     canvas.save(img_path, "JPEG", quality=95)
     with open(label_path, "w") as f:
@@ -675,6 +717,10 @@ def generate_one(boards, piece_sets, backgrounds, img_path, label_path):
     canvas = add_random_text(canvas, placements)
     canvas = add_noise_dots(canvas)
     canvas = add_blur(canvas)
+
+    # Final image-level transforms (grayscale, low contrast)
+    canvas = add_grayscale(canvas)
+    canvas = add_low_contrast(canvas)
 
     canvas.save(img_path, "JPEG", quality=95)
     with open(label_path, "w") as f:
